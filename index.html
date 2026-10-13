@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Aladdin's Cave of Vowels</title>
+  <meta name="description" content="Retro 16-bit arcade English vowel adventure game with student tracking and teacher dashboard." />
+  <meta property="og:title" content="Aladdin's Cave of Vowels" />
+  <meta property="og:description" content="Retro 16-bit arcade English vowel adventure game with student tracking and teacher dashboard." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Google Fonts: Retro 16-bit Arcade Font & Clean Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase Compatibility SDK via CDN in <head> -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #08061a;
+      --card-bg: rgba(15, 23, 42, 0.95);
+      --gold: #f59e0b;
+      --gold-light: #fbbf24;
+      --gold-border: #b45309;
+      --emerald: #10b981;
+      --ruby: #ef4444;
+      --font-pixel: 'Press Start 2P', monospace, cursive;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at 50% 10%, #1e1038 0%, #08061a 100%);
+      color: #fef3c7;
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+
+    .font-pixel {
+      font-family: var(--font-pixel);
+    }
+
+    .gold-glow {
+      text-shadow: 0 0 8px rgba(245, 158, 11, 0.8), 0 0 20px rgba(217, 119, 6, 0.5);
+    }
+
+    /* Screen Management */
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 900px;
+      padding: 12px;
+      margin: auto;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Card Panels */
+    .panel {
+      background: var(--card-bg);
+      border: 2px solid var(--gold);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(245, 158, 11, 0.15);
+      position: relative;
+      width: 100%;
+    }
+
+    .panel-corners::before,
+    .panel-corners::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--gold-light);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--gold);
+    }
+    .panel-corners::before { top: 6px; left: 6px; }
+    .panel-corners::after { top: 6px; right: 6px; }
+
+    /* Buttons */
+    .btn-gold {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      color: #020617;
+      font-family: var(--font-pixel);
+      font-size: 13px;
+      font-weight: bold;
+      border: 2px solid #fef08a;
+      border-radius: 12px;
+      padding: 14px 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+      transition: all 0.15s ease;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-gold:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-gold:active {
+      transform: translateY(1px);
+      filter: brightness(0.95);
+    }
+
+    .btn-gold:disabled {
+      background: #334155;
+      color: #64748b;
+      border-color: #475569;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: #fde68a;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #334155;
+      border-color: var(--gold);
+    }
+
+    /* Class Selector Buttons */
+    .class-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .class-btn {
+      background: #0f172a;
+      border: 2px solid #334155;
+      color: #fde68a;
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      padding: 10px 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .class-btn.active {
+      background: var(--gold);
+      color: #020617;
+      border-color: #fef08a;
+      font-weight: bold;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Inputs */
+    .input-field {
+      width: 100%;
+      background: #020617;
+      border: 2px solid rgba(245, 158, 11, 0.6);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #fef3c7;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--gold-light);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Arcade HUD */
+    .game-hud {
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid var(--gold);
+      border-bottom: none;
+      border-radius: 14px 14px 0 0;
+      padding: 10px 14px;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hud-box {
+      background: #020617;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      border-radius: 8px;
+      padding: 4px 10px;
+      text-align: center;
+    }
+
+    .hud-label {
+      font-size: 9px;
+      color: var(--gold-light);
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .hud-value {
+      font-family: var(--font-pixel);
+      font-size: 13px;
+      color: #fef08a;
+      font-weight: bold;
+    }
+
+    /* Word Banner */
+    .target-word-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #020617;
+      border: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 6px 14px;
+      box-shadow: inset 0 0 8px rgba(245, 158, 11, 0.2);
+    }
+
+    .word-letter {
+      font-family: var(--font-pixel);
+      font-size: 18px;
+      color: #fef3c7;
+      font-weight: bold;
+    }
+
+    .word-blank {
+      font-family: var(--font-pixel);
+      font-size: 18px;
+      color: var(--gold-light);
+      border-bottom: 3px solid var(--gold-light);
+      padding: 0 4px;
+      animation: pulseBlank 1s infinite alternate;
+    }
+
+    @keyframes pulseBlank {
+      from { color: #f59e0b; border-color: #f59e0b; }
+      to { color: #fef08a; border-color: #fef08a; }
+    }
+
+    /* Canvas Wrapper */
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border: 2px solid var(--gold);
+      border-radius: 0 0 14px 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+      cursor: pointer;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    /* Touch Jump Button (Mobile Unobtrusive) */
+    .mobile-jump-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      z-index: 30;
+      background: rgba(245, 158, 11, 0.85);
+      border: 2px solid #fef08a;
+      color: #020617;
+      font-family: var(--font-pixel);
+      font-size: 11px;
+      font-weight: bold;
+      padding: 9px 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      transition: transform 0.1s;
+    }
+
+    .mobile-jump-btn:active {
+      transform: scale(0.94);
+      background: #fbbf24;
+    }
+
+    /* Scanlines */
+    .scanlines {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 38, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Table styling for teacher dashboard */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: #020617;
+      color: var(--gold-light);
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 2px solid rgba(245, 158, 11, 0.4);
+      cursor: pointer;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #1e293b;
+      color: #f1f5f9;
+    }
+
+    tr:hover td {
+      background: rgba(30, 41, 59, 0.5);
+    }
+
+    /* Footer */
+    footer {
+      width: 100%;
+      text-align: center;
+      padding: 12px;
+      font-size: 11px;
+      color: rgba(245, 158, 11, 0.5);
+      border-top: 1px solid rgba(245, 158, 11, 0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hud-value { font-size: 11px; }
+      .word-letter, .word-blank { font-size: 15px; }
+      .btn-gold { padding: 12px 18px; font-size: 11px; }
+      table { font-size: 11px; }
+      th { font-size: 9px; padding: 8px 6px; }
+      td { padding: 8px 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== SCREEN A: STUDENT ENTRY ==================== -->
+  <section id="screen-entry" class="screen active">
+    <div class="panel panel-corners" style="max-width: 520px; padding: 28px 24px;">
+      <!-- Sound toggle at top right -->
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <button id="entry-sound-btn" class="btn-secondary" onclick="toggleMute()">
+          🔊 Sound On
+        </button>
+      </div>
+
+      <!-- Aladdin Title & Lamp Header -->
+      <div style="text-align: center; margin-bottom: 22px;">
+        <div style="font-size: 40px; margin-bottom: 6px;">🪔</div>
+        <h1 class="font-pixel gold-glow" style="font-size: 18px; color: var(--gold-light); letter-spacing: 1px; margin-bottom: 4px;">
+          ALADDIN'S CAVE
+        </h1>
+        <h2 class="font-pixel" style="font-size: 13px; color: #fef08a;">
+          OF VOWELS
+        </h2>
+        <p style="font-size: 13px; color: #cbd5e1; margin-top: 8px; line-height: 1.4;">
+          Run through the Cave of Wonders! Jump to catch the correct missing vowels and unlock ancient treasure.
+        </p>
+      </div>
+
+      <!-- Student Input Form -->
+      <form id="entry-form" onsubmit="handleStartAdventure(event)">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: var(--gold-light); text-transform: uppercase; margin-bottom: 6px;">
+            ✨ Student Full Name
+          </label>
+          <input 
+            type="text" 
+            id="student-name-input" 
+            class="input-field" 
+            placeholder="e.g. Sarah Jenkins" 
+            required 
+            maxlength="40"
+            autocomplete="name"
+            oninput="validateEntryForm()"
+          />
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 11px; font-weight: 700; color: var(--gold-light); text-transform: uppercase; margin-bottom: 6px;">
+            📚 Select Class / Year Level
+          </label>
+          <div class="class-grid">
+            <button type="button" class="class-btn active" onclick="selectClass('Year 1', this)">Year 1</button>
+            <button type="button" class="class-btn" onclick="selectClass('Year 2', this)">Year 2</button>
+            <button type="button" class="class-btn" onclick="selectClass('Year 3', this)">Year 3</button>
+            <button type="button" class="class-btn" onclick="selectClass('Year 4', this)">Year 4</button>
+            <button type="button" class="class-btn" onclick="selectClass('Year 5', this)">Year 5</button>
+            <button type="button" class="class-btn" onclick="selectClass('Year 6', this)">Year 6</button>
+          </div>
+          <div id="class-desc" style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 4px; font-style: italic;">
+            Year 1: 3-letter words (C_T, S_N, B_D)
+          </div>
+        </div>
+
+        <!-- Rules Box -->
+        <div style="background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 12px; font-size: 12px; margin-bottom: 20px; line-height: 1.6;">
+          <div style="font-weight: bold; color: var(--gold-light); margin-bottom: 4px;">🎮 How to Play:</div>
+          <div>• Read the word at the top with the blank <strong style="color:var(--gold);">[ _ ]</strong></div>
+          <div>• Watch out: <strong style="color:#f87171;">decoy letters scroll past first!</strong></div>
+          <div>• Catch the <strong style="color:var(--emerald);">CORRECT vowel</strong>: <span style="color:var(--emerald); font-weight:bold;">+100 pts</span></div>
+          <div>• Catch a <strong style="color:var(--ruby);">WRONG letter</strong>: <span style="color:var(--ruby); font-weight:bold;">-10 pts</span></div>
+          <div>• Time Limit: <strong>120 Seconds</strong></div>
+        </div>
+
+        <button type="submit" id="start-btn" class="btn-gold" style="width: 100%;" disabled>
+          ▶ Start Adventure
+        </button>
+      </form>
+
+      <!-- Teacher Portal Link -->
+      <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(245, 158, 11, 0.2); text-align: center;">
+        <button type="button" class="btn-secondary" onclick="showScreen('teacher')">
+          🔒 Teacher Portal Login
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN B: CANVAS ARCADE GAME ==================== -->
+  <section id="screen-game" class="screen">
+    <!-- Top HUD -->
+    <div class="game-hud">
+      <!-- Student Info -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="exitGame()">
+          ← Exit
+        </button>
+        <div>
+          <div id="hud-student-name" class="font-pixel" style="font-size: 11px; color: var(--gold-light); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            Player
+          </div>
+          <div id="hud-student-class" style="font-size: 10px; color: #94a3b8;">
+            Year 1
+          </div>
+        </div>
+      </div>
+
+      <!-- Target Word Banner -->
+      <div style="display: flex; flex-direction: column; align-items: center; min-width: 200px;">
+        <div style="font-size: 9px; color: var(--gold); font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
+          Find Missing Vowel:
+        </div>
+        <div id="target-word-display" class="target-word-card">
+          <!-- Dynamic word letters inserted by JS -->
+        </div>
+        <div id="word-hint" style="font-size: 11px; color: #cbd5e1; font-style: italic; margin-top: 3px; max-width: 250px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          Hint
+        </div>
+      </div>
+
+      <!-- Timer & Score & Audio -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="hud-box">
+          <div class="hud-label">Time</div>
+          <div id="hud-timer" class="hud-value">2:00</div>
+        </div>
+        <div class="hud-box">
+          <div class="hud-label">Score</div>
+          <div id="hud-score" class="hud-value" style="color: var(--gold);">0</div>
+        </div>
+        <button id="game-sound-btn" class="btn-secondary" style="padding: 6px;" onclick="toggleMute()">
+          🔊
+        </button>
+      </div>
+    </div>
+
+    <!-- Canvas Game Container -->
+    <div class="canvas-container" id="canvas-wrapper">
+      <canvas id="game-canvas" width="800" height="450"></canvas>
+      <div class="scanlines"></div>
+      
+      <!-- Compact Unobtrusive Mobile Jump Button -->
+      <button 
+        type="button" 
+        id="jump-btn" 
+        class="mobile-jump-btn" 
+        ontouchstart="handleTouchJump(event)" 
+        onmousedown="handleTouchJump(event)"
+      >
+        ▲ JUMP
+      </button>
+    </div>
+
+    <!-- Mobile Sub-bar -->
+    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 11px; color: #94a3b8;">
+      <span>Solved: <strong id="hud-solved" style="color:#fef08a;">0</strong></span>
+      <span>Accuracy: <strong id="hud-accuracy" style="color:#fef08a;">100%</strong></span>
+      <span>Tap Screen or [Space] to Jump</span>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN C: RESULTS & SUBMISSION ==================== -->
+  <section id="screen-results" class="screen">
+    <div class="panel panel-corners" style="max-width: 520px; padding: 30px 24px; text-align: center;">
+      <div style="font-size: 46px; margin-bottom: 8px;">👑</div>
+      <h1 class="font-pixel gold-glow" style="font-size: 18px; color: var(--gold-light);">
+        CAVE CONQUERED!
+      </h1>
+      <div id="result-rank-title" style="font-size: 14px; font-weight: bold; color: #fde68a; margin-top: 4px;">
+        Grand Sultan of Vowels
+      </div>
+      <div id="result-student-tag" style="display: inline-block; background: #1e293b; border: 1px solid rgba(245, 158, 11, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-top: 10px;">
+        Student • Year 1
+      </div>
+
+      <!-- Metric Grid -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0;">
+        <div style="background: #020617; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 12px 6px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Final Score</div>
+          <div id="res-score" class="font-pixel" style="font-size: 18px; color: var(--gold); margin-top: 6px;">0</div>
+          <div style="font-size: 10px; color: #64748b;">Points</div>
+        </div>
+        <div style="background: #020617; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 12px 6px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Words Solved</div>
+          <div id="res-words" class="font-pixel" style="font-size: 18px; color: var(--emerald); margin-top: 6px;">0</div>
+          <div style="font-size: 10px; color: #64748b;">Targets</div>
+        </div>
+        <div style="background: #020617; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 12px 6px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Accuracy</div>
+          <div id="res-accuracy" class="font-pixel" style="font-size: 18px; color: #38bdf8; margin-top: 6px;">100%</div>
+          <div style="font-size: 10px; color: #64748b;">Precision</div>
+        </div>
+      </div>
+
+      <!-- Submission Status Notification -->
+      <div style="background: rgba(6, 78, 59, 0.4); border: 2px solid #10b981; border-radius: 12px; padding: 12px; text-align: left; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px;">
+        <span style="font-size: 18px;">✅</span>
+        <div>
+          <div style="font-size: 13px; font-weight: bold; color: #6ee7b7;">
+            Record submitted successfully to Teacher Anne!
+          </div>
+          <div id="firebase-sync-time" style="font-size: 11px; color: #a7f3d0; margin-top: 2px;">
+            Synced to classroom database path /scores/.
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button type="button" class="btn-secondary" style="justify-content: center; padding: 12px;" onclick="copyScoreSummary()">
+          📋 Copy Score Summary (WhatsApp / Form)
+        </button>
+        <button type="button" class="btn-gold" style="width: 100%;" onclick="restartGame()">
+          🔄 Play Again
+        </button>
+      </div>
+
+      <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(245, 158, 11, 0.2); text-align: center;">
+        <button type="button" class="btn-secondary" onclick="showScreen('teacher')">
+          🔒 Teacher Portal Dashboard
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN D: TEACHER DASHBOARD ==================== -->
+  <section id="screen-teacher" class="screen">
+    <!-- Login Gate (if not authenticated) -->
+    <div id="teacher-login-gate" class="panel panel-corners" style="max-width: 440px; padding: 26px 22px; text-align: center;">
+      <div style="font-size: 36px; margin-bottom: 6px;">🔐</div>
+      <h2 class="font-pixel gold-glow" style="font-size: 15px; color: var(--gold-light); margin-bottom: 4px;">
+        Teacher Portal
+      </h2>
+      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px;">
+        Enter Teacher Anne's access password to view real-time student results.
+      </p>
+
+      <form onsubmit="handleTeacherLogin(event)">
+        <input 
+          type="password" 
+          id="teacher-password-input" 
+          class="input-field" 
+          placeholder="Password required..." 
+          required 
+          autocomplete="current-password"
+        />
+        <div id="teacher-password-error" style="color: #f87171; font-size: 11px; margin-top: 6px; display: none;">
+          Incorrect password. Please verify Teacher Anne's access code.
+        </div>
+        <button type="submit" class="btn-gold" style="width: 100%; margin-top: 14px;">
+          Unlock Dashboard
+        </button>
+      </form>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button type="button" class="btn-secondary" onclick="showScreen('entry')">
+          ← Back to Game
+        </button>
+      </div>
+    </div>
+
+    <!-- Authenticated Teacher View -->
+    <div id="teacher-dashboard-view" style="display: none; width: 100%; flex-direction: column; gap: 14px;">
+      <!-- Dashboard Header -->
+      <div class="panel" style="padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+        <div>
+          <h1 class="font-pixel gold-glow" style="font-size: 15px; color: var(--gold-light);">
+            Teacher Anne's Dashboard
+          </h1>
+          <div style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+            <span>Realtime Firebase Connected (/scores/)</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-gold" style="padding: 10px 16px; font-size: 11px;" onclick="exportScoresToCSV()">
+            📥 Export to CSV
+          </button>
+          <button class="btn-secondary" onclick="showScreen('entry')">
+            ← Student Game
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+        <div class="panel" style="padding: 14px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Total Submissions</div>
+          <div id="stat-total" class="font-pixel" style="font-size: 20px; color: #38bdf8; margin-top: 4px;">0</div>
+        </div>
+        <div class="panel" style="padding: 14px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Highest Score</div>
+          <div id="stat-high" class="font-pixel" style="font-size: 20px; color: var(--gold); margin-top: 4px;">0</div>
+        </div>
+        <div class="panel" style="padding: 14px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Class Average</div>
+          <div id="stat-avg" class="font-pixel" style="font-size: 20px; color: #a855f7; margin-top: 4px;">0 pts</div>
+        </div>
+        <div class="panel" style="padding: 14px;">
+          <div style="font-size: 10px; color: var(--gold-light); font-weight: bold; text-transform: uppercase;">Avg Accuracy</div>
+          <div id="stat-acc" class="font-pixel" style="font-size: 20px; color: var(--emerald); margin-top: 4px;">100%</div>
+        </div>
+      </div>
+
+      <!-- Filters & Search Toolbar -->
+      <div class="panel" style="padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+        <!-- Class Filter Buttons -->
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('All Classes', this)">All</button>
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('Year 1', this)">Year 1</button>
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('Year 2', this)">Year 2</button>
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('Year 3', this)">Year 3</button>
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('Year 4', this)">Year 4</button>
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('Year 5', this)">Year 5</button>
+          <button class="btn-secondary" style="font-size: 11px;" onclick="setTableClassFilter('Year 6', this)">Year 6</button>
+        </div>
+
+        <!-- Search Input -->
+        <div style="position: relative; min-width: 200px;">
+          <input 
+            type="text" 
+            id="table-search-input" 
+            class="input-field" 
+            style="padding: 8px 12px; font-size: 12px;" 
+            placeholder="Search student..." 
+            oninput="renderScoresTable()"
+          />
+        </div>
+      </div>
+
+      <!-- Student Records Table -->
+      <div class="panel" style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="toggleSort('name')">Student Name</th>
+              <th>Class</th>
+              <th onclick="toggleSort('score')">Score</th>
+              <th onclick="toggleSort('accuracy')">Accuracy</th>
+              <th onclick="toggleSort('timestamp')">Date / Time</th>
+            </tr>
+          </thead>
+          <tbody id="scores-table-body">
+            <!-- Dynamic rows inserted by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Footer -->
+  <footer>
+    Aladdin's Cave of Vowels • 16-Bit English Arcade Adventure • Teacher Anne 2026
+  </footer>
+
+  <!-- ==================== PLAIN JAVASCRIPT GAME LOGIC ==================== -->
+  <script>
+    /* 1. FIREBASE INTEGRATION & DATABASE INITIALIZATION */
+    const firebaseConfig = {
+      apiKey: "AIzaSyAR5GdrmL5XfVt_uWxX2J1tCwCtUF8pYNk",
+      authDomain: "aladdin-english-game.firebaseapp.com",
+      databaseURL: "https://aladdin-english-game-default-rtdb.firebaseio.com",
+      projectId: "aladdin-english-game",
+      storageBucket: "aladdin-english-game.firebasestorage.app",
+      messagingSenderId: "299335316128",
+      appId: "1:299335316128:web:c1e8e96eab366a4a57cfc5",
+      measurementId: "G-SYP3WQXGP5"
+    };
+
+    let database = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        database = firebase.database();
+      }
+    } catch (e) {
+      console.warn("Firebase RTDB init notice:", e);
+    }
+
+    // Local Storage Backup
+    function saveLocalScore(record) {
+      try {
+        const key = "aladdin_cave_scores_backup";
+        const list = JSON.parse(localStorage.getItem(key) || "[]");
+        list.unshift(record);
+        localStorage.setItem(key, JSON.stringify(list.slice(0, 100)));
+      } catch (e) {}
+    }
+
+    function getLocalScores() {
+      try {
+        return JSON.parse(localStorage.getItem("aladdin_cave_scores_backup") || "[]");
+      } catch (e) {
+        return [];
+      }
+    }
+
+    /* 2. SOUND EFFECTS (Web Audio API Synthesizer) */
+    let audioCtx = null;
+    let isMuted = localStorage.getItem("aladdin_sound_muted") === "true";
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) audioCtx = new AudioCtx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      localStorage.setItem("aladdin_sound_muted", isMuted ? "true" : "false");
+      updateSoundButtons();
+    }
+
+    function updateSoundButtons() {
+      const entryBtn = document.getElementById("entry-sound-btn");
+      const gameBtn = document.getElementById("game-sound-btn");
+      if (entryBtn) entryBtn.textContent = isMuted ? "🔇 Sound Off" : "🔊 Sound On";
+      if (gameBtn) gameBtn.textContent = isMuted ? "🔇" : "🔊";
+    }
+    updateSoundButtons();
+
+    function playJumpSound() {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(480, now + 0.15);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.17);
+      } catch (e) {}
+    }
+
+    function playCollectSound() {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          const start = now + idx * 0.04;
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.15, start);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + 0.19);
+        });
+      } catch (e) {}
+    }
+
+    function playWrongSound() {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.23);
+      } catch (e) {}
+    }
+
+    function playFanfare() {
+      if (isMuted) return;
+      initAudio();
+      if (!audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        [587.33, 739.99, 880.00, 1174.66, 1479.98].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          const start = now + idx * 0.06;
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.2, start);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + 0.36);
+        });
+      } catch (e) {}
+    }
+
+    /* 3. 120+ CHALLENGE VOCABULARY DATABASE (YEAR 1-6) */
+    const WORD_DATABASE = [
+      // YEAR 1
+      { id: "y1_cat", fullWord: "CAT", displayParts: ["C", "_", "T"], missingLetter: "A", hint: "Furry desert bazaar pet", year: "Year 1" },
+      { id: "y1_sun", fullWord: "SUN", displayParts: ["S", "_", "N"], missingLetter: "U", hint: "Blazing desert sky", year: "Year 1" },
+      { id: "y1_bed", fullWord: "BED", displayParts: ["B", "_", "D"], missingLetter: "E", hint: "Rest after a long journey", year: "Year 1" },
+      { id: "y1_cup", fullWord: "CUP", displayParts: ["C", "_", "P"], missingLetter: "U", hint: "Vessel for sweet mint tea", year: "Year 1" },
+      { id: "y1_gem", fullWord: "GEM", displayParts: ["G", "_", "M"], missingLetter: "E", hint: "Sparkling jewel in cave", year: "Year 1" },
+      { id: "y1_fox", fullWord: "FOX", displayParts: ["F", "_", "X"], missingLetter: "O", hint: "Sly night creature", year: "Year 1" },
+      { id: "y1_pot", fullWord: "POT", displayParts: ["P", "_", "T"], missingLetter: "O", hint: "Clay jar at the bazaar", year: "Year 1" },
+      { id: "y1_hat", fullWord: "HAT", displayParts: ["H", "_", "T"], missingLetter: "A", hint: "Red fez on the head", year: "Year 1" },
+      { id: "y1_lamp", fullWord: "LAMP", displayParts: ["L", "_", "M", "P"], missingLetter: "A", hint: "Rub the magic oil lamp!", year: "Year 1" },
+      { id: "y1_gold", fullWord: "GOLD", displayParts: ["G", "_", "L", "D"], missingLetter: "O", hint: "Yellow cave treasure", year: "Year 1" },
+      { id: "y1_star", fullWord: "STAR", displayParts: ["S", "T", "_", "R"], missingLetter: "A", hint: "Twinkling light in the sky", year: "Year 1" },
+      { id: "y1_fish", fullWord: "FISH", displayParts: ["F", "_", "S", "H"], missingLetter: "I", hint: "Swims in the oasis pool", year: "Year 1" },
+      { id: "y1_sand", fullWord: "SAND", displayParts: ["S", "_", "N", "D"], missingLetter: "A", hint: "Golden dunes", year: "Year 1" },
+      // YEAR 2
+      { id: "y2_cave", fullWord: "CAVE", displayParts: ["C", "_", "V", "E"], missingLetter: "A", hint: "Cave of Wonders", year: "Year 2" },
+      { id: "y2_magic", fullWord: "MAGIC", displayParts: ["M", "_", "G", "I", "C"], missingLetter: "A", hint: "Sparks from the lamp", year: "Year 2" },
+      { id: "y2_sleep", fullWord: "SLEEP", displayParts: ["S", "L", "_", "E", "P"], missingLetter: "E", hint: "Slumber beneath the stars", year: "Year 2" },
+      { id: "y2_tiger", fullWord: "TIGER", displayParts: ["T", "_", "G", "E", "R"], missingLetter: "I", hint: "Guardian with giant fangs", year: "Year 2" },
+      { id: "y2_camel", fullWord: "CAMEL", displayParts: ["C", "_", "M", "E", "L"], missingLetter: "A", hint: "Carries spice caravan", year: "Year 2" },
+      { id: "y2_flame", fullWord: "FLAME", displayParts: ["F", "L", "_", "M", "E"], missingLetter: "A", hint: "Fire in the torch", year: "Year 2" },
+      { id: "y2_oasis", fullWord: "OASIS", displayParts: ["O", "_", "S", "I", "S"], missingLetter: "A", hint: "Fresh desert water spring", year: "Year 2" },
+      { id: "y2_crown", fullWord: "CROWN", displayParts: ["C", "R", "_", "W", "N"], missingLetter: "O", hint: "Worn by the royal Sultan", year: "Year 2" },
+      { id: "y2_jewel", fullWord: "JEWEL", displayParts: ["J", "_", "W", "E", "L"], missingLetter: "E", hint: "Precious polished gemstone", year: "Year 2" },
+      { id: "y2_night", fullWord: "NIGHT", displayParts: ["N", "_", "G", "H", "T"], missingLetter: "I", hint: "Arabian night of stars", year: "Year 2" },
+      { id: "y2_wish", fullWord: "WISH", displayParts: ["W", "_", "S", "H"], missingLetter: "I", hint: "Granted by the blue Genie", year: "Year 2" },
+      { id: "y2_bread", fullWord: "BREAD", displayParts: ["B", "R", "_", "A", "D"], missingLetter: "E", hint: "Aladdin shares with poor kids", year: "Year 2" },
+      // YEAR 3
+      { id: "y3_aladdin", fullWord: "ALADDIN", displayParts: ["A", "L", "A", "D", "D", "_", "N"], missingLetter: "I", hint: "Our clever street hero", year: "Year 3" },
+      { id: "y3_genie", fullWord: "GENIE", displayParts: ["G", "_", "N", "I", "E"], missingLetter: "E", hint: "Blue master of wishes", year: "Year 3" },
+      { id: "y3_carpet", fullWord: "CARPET", displayParts: ["C", "_", "R", "P", "E", "T"], missingLetter: "A", hint: "Woven rug that flies", year: "Year 3" },
+      { id: "y3_desert", fullWord: "DESERT", displayParts: ["D", "_", "S", "E", "R", "T"], missingLetter: "E", hint: "Ocean of golden dunes", year: "Year 3" },
+      { id: "y3_palace", fullWord: "PALACE", displayParts: ["P", "_", "L", "A", "C", "E"], missingLetter: "A", hint: "Golden Sultan residence", year: "Year 3" },
+      { id: "y3_sultan", fullWord: "SULTAN", displayParts: ["S", "_", "L", "T", "A", "N"], missingLetter: "U", hint: "Wise ruler of Agrabah", year: "Year 3" },
+      { id: "y3_market", fullWord: "MARKET", displayParts: ["M", "_", "R", "K", "E", "T"], missingLetter: "A", hint: "Bustling town bazaar", year: "Year 3" },
+      { id: "y3_monkey", fullWord: "MONKEY", displayParts: ["M", "_", "N", "K", "E", "Y"], missingLetter: "O", hint: "Abu Aladdin's companion", year: "Year 3" },
+      { id: "y3_treasure", fullWord: "TREASURE", displayParts: ["T", "R", "_", "A", "S", "U", "R", "E"], missingLetter: "E", hint: "Heaps of rubies and gold", year: "Year 3" },
+      { id: "y3_friend", fullWord: "FRIEND", displayParts: ["F", "R", "_", "E", "N", "D"], missingLetter: "I", hint: "Never had a friend like him", year: "Year 3" },
+      { id: "y3_feather", fullWord: "FEATHER", displayParts: ["F", "_", "A", "T", "H", "E", "R"], missingLetter: "E", hint: "Purple plume in turban", year: "Year 3" },
+      { id: "y3_shield", fullWord: "SHIELD", displayParts: ["S", "H", "_", "E", "L", "D"], missingLetter: "I", hint: "Protective bronze armor", year: "Year 3" },
+      // YEAR 4
+      { id: "y4_jasmine", fullWord: "JASMINE", displayParts: ["J", "_", "S", "M", "I", "N", "E"], missingLetter: "A", hint: "Princess of the kingdom", year: "Year 4" },
+      { id: "y4_diamond", fullWord: "DIAMOND", displayParts: ["D", "_", "A", "M", "O", "N", "D"], missingLetter: "I", hint: "Diamond in the rough!", year: "Year 4" },
+      { id: "y4_kingdom", fullWord: "KINGDOM", displayParts: ["K", "_", "N", "G", "D", "O", "M"], missingLetter: "I", hint: "Empire across the dunes", year: "Year 4" },
+      { id: "y4_emerald", fullWord: "EMERALD", displayParts: ["_", "M", "E", "R", "A", "L", "D"], missingLetter: "E", hint: "Glowing green gemstone", year: "Year 4" },
+      { id: "y4_sapphire", fullWord: "SAPPHIRE", displayParts: ["S", "_", "P", "P", "H", "I", "R", "E"], missingLetter: "A", hint: "Deep blue royal jewel", year: "Year 4" },
+      { id: "y4_courage", fullWord: "COURAGE", displayParts: ["C", "_", "U", "R", "A", "G", "E"], missingLetter: "O", hint: "Bravery facing cave dangers", year: "Year 4" },
+      { id: "y4_fortune", fullWord: "FORTUNE", displayParts: ["F", "_", "R", "T", "U", "N", "E"], missingLetter: "O", hint: "Tremendous wealth", year: "Year 4" },
+      { id: "y4_mystery", fullWord: "MYSTERY", displayParts: ["M", "_", "S", "T", "E", "R", "Y"], missingLetter: "Y", hint: "Enigma behind palace doors", year: "Year 4" },
+      { id: "y4_voyage", fullWord: "VOYAGE", displayParts: ["V", "_", "Y", "A", "G", "E"], missingLetter: "O", hint: "Epic quest across seas", year: "Year 4" },
+      { id: "y4_scarab", fullWord: "SCARAB", displayParts: ["S", "C", "_", "R", "A", "B"], missingLetter: "A", hint: "Unites to unlock the cave!", year: "Year 4" },
+      { id: "y4_sphinx", fullWord: "SPHINX", displayParts: ["S", "P", "H", "_", "N", "X"], missingLetter: "I", hint: "Asks desert riddles", year: "Year 4" },
+      // YEAR 5
+      { id: "y5_wondrous", fullWord: "WONDROUS", displayParts: ["W", "_", "N", "D", "R", "O", "U", "S"], missingLetter: "O", hint: "Inspiring awe and delight", year: "Year 5" },
+      { id: "y5_splendid", fullWord: "SPLENDID", displayParts: ["S", "P", "L", "_", "N", "D", "I", "D"], missingLetter: "E", hint: "Magnificent and royal", year: "Year 5" },
+      { id: "y5_illusion", fullWord: "ILLUSION", displayParts: ["_", "L", "L", "U", "S", "I", "O", "N"], missingLetter: "I", hint: "Mirage on desert dunes", year: "Year 5" },
+      { id: "y5_sorcerer", fullWord: "SORCERER", displayParts: ["S", "_", "R", "C", "E", "R", "E", "R"], missingLetter: "O", hint: "Wielder of dark sorcery", year: "Year 5" },
+      { id: "y5_majestic", fullWord: "MAJESTIC", displayParts: ["M", "_", "J", "E", "S", "T", "I", "C"], missingLetter: "A", hint: "Grandeur fitting a Sultan", year: "Year 5" },
+      { id: "y5_enchanted", fullWord: "ENCHANTED", displayParts: ["_", "N", "C", "H", "A", "N", "T", "E", "D"], missingLetter: "E", hint: "Infused with magic spells", year: "Year 5" },
+      { id: "y5_brilliant", fullWord: "BRILLIANT", displayParts: ["B", "R", "_", "L", "L", "I", "A", "N", "T"], missingLetter: "I", hint: "Dazzling with light and mind", year: "Year 5" },
+      { id: "y5_beautiful", fullWord: "BEAUTIFUL", displayParts: ["B", "_", "A", "U", "T", "I", "F", "U", "L"], missingLetter: "E", hint: "A whole new world", year: "Year 5" },
+      { id: "y5_guardian", fullWord: "GUARDIAN", displayParts: ["G", "_", "A", "R", "D", "I", "A", "N"], missingLetter: "U", hint: "Protector of the lamp", year: "Year 5" },
+      { id: "y5_powerful", fullWord: "POWERFUL", displayParts: ["P", "_", "W", "E", "R", "F", "U", "L"], missingLetter: "O", hint: "Phenomenal cosmic might!", year: "Year 5" },
+      // YEAR 6
+      { id: "y6_extraordinary", fullWord: "EXTRAORDINARY", displayParts: ["_", "X", "T", "R", "A", "O", "R", "D", "I", "N", "A", "R", "Y"], missingLetter: "E", hint: "Beyond all imagination", year: "Year 6" },
+      { id: "y6_spectacular", fullWord: "SPECTACULAR", displayParts: ["S", "P", "_", "C", "T", "A", "C", "U", "L", "A", "R"], missingLetter: "E", hint: "Dazzling visual show", year: "Year 6" },
+      { id: "y6_metamorphosis", fullWord: "METAMORPHOSIS", displayParts: ["M", "_", "T", "A", "M", "O", "R", "P", "H", "O", "S", "I", "S"], missingLetter: "E", hint: "Genie transforming shapes!", year: "Year 6" },
+      { id: "y6_fascinating", fullWord: "FASCINATING", displayParts: ["F", "_", "S", "C", "I", "N", "A", "T", "I", "N", "G"], missingLetter: "A", hint: "Utterly engrossing", year: "Year 6" },
+      { id: "y6_sovereign", fullWord: "SOVEREIGN", displayParts: ["S", "_", "V", "E", "R", "E", "I", "G", "N"], missingLetter: "O", hint: "Supreme royal monarch", year: "Year 6" },
+      { id: "y6_resplendent", fullWord: "RESPLENDENT", displayParts: ["R", "_", "S", "P", "L", "E", "N", "D", "E", "N", "T"], missingLetter: "E", hint: "Shining with gold luster", year: "Year 6" },
+      { id: "y6_catastrophe", fullWord: "CATASTROPHE", displayParts: ["C", "_", "T", "A", "S", "T", "R", "O", "P", "H", "E"], missingLetter: "A", hint: "Disastrous event", year: "Year 6" },
+      { id: "y6_conscious", fullWord: "CONSCIOUS", displayParts: ["C", "_", "N", "S", "C", "I", "O", "U", "S"], missingLetter: "O", hint: "Aware of danger", year: "Year 6" }
+    ];
+
+    /* 4. APP STATE */
+    let currentStudentName = "";
+    let currentStudentClass = "Year 1";
+    let gameScore = 0;
+    let wordsSolved = 0;
+    let correctCatches = 0;
+    let wrongCatches = 0;
+    let timeLeft = 120;
+    let gameInterval = null;
+    let animFrameId = null;
+
+    let sessionUsedWordIds = new Set();
+    let currentWord = null;
+    let decoysRemaining = 2;
+    let hasTargetSpawned = false;
+    let nextGemSpawnTimer = 30;
+
+    // Gems, Particles, Floating Text
+    let gems = [];
+    let particles = [];
+    let floatingTexts = [];
+    let screenShake = 0;
+    let redFlash = 0;
+    let goldFlash = 0;
+    let frameCount = 0;
+    let groundScroll = 0;
+
+    // Aladdin Character
+    const player = {
+      x: 120,
+      y: 350,
+      groundY: 350,
+      vy: 0,
+      isGrounded: true,
+      width: 48,
+      height: 70,
+      jumpForce: -14.8,
+      gravity: 0.65,
+      runFrame: 0
+    };
+
+    const GEM_COLOR_PALETTES = {
+      ruby: { fill: "#ef4444", stroke: "#991b1b" },
+      sapphire: { fill: "#3b82f6", stroke: "#1e40af" },
+      emerald: { fill: "#10b981", stroke: "#065f46" },
+      amethyst: { fill: "#a855f7", stroke: "#6b21a8" },
+      topaz: { fill: "#f59e0b", stroke: "#b45309" }
+    };
+    const GEM_COLOR_KEYS = ["ruby", "sapphire", "emerald", "amethyst", "topaz"];
+
+    /* 5. NAVIGATION */
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const target = document.getElementById('screen-' + screenId);
+      if (target) target.classList.add('active');
+
+      if (screenId === 'teacher') {
+        const passGate = document.getElementById('teacher-login-gate');
+        const dashView = document.getElementById('teacher-dashboard-view');
+        if (passGate && dashView) {
+          passGate.style.display = teacherLoggedIn ? 'none' : 'block';
+          dashView.style.display = teacherLoggedIn ? 'flex' : 'none';
+        }
+      }
+    }
+
+    /* 6. SCREEN A: STUDENT ENTRY LOGIC */
+    function selectClass(className, btnElement) {
+      currentStudentClass = className;
+      document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+      if (btnElement) btnElement.classList.add('active');
+
+      const descMap = {
+        'Year 1': 'Year 1: 3-letter words (C_T, S_N, B_D)',
+        'Year 2': 'Year 2: 4 & 5-letter words (C_VE, M_GIC, SL_EP)',
+        'Year 3': 'Year 3: Adventure words (ALADD_N, G_NIE, P_LACE)',
+        'Year 4': 'Year 4: Royal words (J_SMINE, D_AMOND, C_URAGE)',
+        'Year 5': 'Year 5: Wonder words (W_NDROUS, SPL_NDID, M_JESTIC)',
+        'Year 6': 'Year 6: Tricky vocabulary (M_TAMORPHOSIS, S_VEREIGN)'
+      };
+      document.getElementById('class-desc').textContent = descMap[className] || '';
+    }
+
+    function validateEntryForm() {
+      const name = document.getElementById('student-name-input').value.trim();
+      const startBtn = document.getElementById('start-btn');
+      startBtn.disabled = name.length === 0;
+    }
+
+    function handleStartAdventure(e) {
+      if (e) e.preventDefault();
+      const name = document.getElementById('student-name-input').value.trim();
+      if (!name) return;
+
+      currentStudentName = name;
+      playFanfare();
+      startArcadeGame();
+    }
+
+    /* 7. SCREEN B: GAME PLAY LOOP & PHYSICS */
+    function startArcadeGame() {
+      // Reset Stats
+      gameScore = 0;
+      wordsSolved = 0;
+      correctCatches = 0;
+      wrongCatches = 0;
+      timeLeft = 120;
+      sessionUsedWordIds.clear();
+
+      gems = [];
+      particles = [];
+      floatingTexts = [];
+      screenShake = 0;
+      redFlash = 0;
+      goldFlash = 0;
+
+      // Update HUD Labels
+      document.getElementById('hud-student-name').textContent = currentStudentName;
+      document.getElementById('hud-student-class').textContent = currentStudentClass;
+      document.getElementById('hud-score').textContent = "0";
+      document.getElementById('hud-solved').textContent = "0";
+      document.getElementById('hud-accuracy').textContent = "100%";
+      document.getElementById('hud-timer').textContent = "2:00";
+
+      // Pick first word
+      pickNextWord();
+
+      showScreen('game');
+
+      // Start 120s Countdown Timer
+      clearInterval(gameInterval);
+      gameInterval = setInterval(() => {
+        timeLeft--;
+        const mins = Math.floor(timeLeft / 60);
+        const secs = (timeLeft % 60).toString().padStart(2, '0');
+        const timerEl = document.getElementById('hud-timer');
+        if (timerEl) {
+          timerEl.textContent = mins + ":" + secs;
+          if (timeLeft <= 20) {
+            timerEl.style.color = '#ef4444';
+          } else {
+            timerEl.style.color = '#fef08a';
+          }
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(gameInterval);
+          endArcadeGame();
+        }
+      }, 1000);
+
+      // Start 60fps canvas loop
+      cancelAnimationFrame(animFrameId);
+      animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function pickNextWord() {
+      // Filter words for selected class first, then others if exhausted
+      const classPool = WORD_DATABASE.filter(w => w.year === currentStudentClass && !sessionUsedWordIds.has(w.id));
+      const backupPool = WORD_DATABASE.filter(w => !sessionUsedWordIds.has(w.id));
+
+      let pool = classPool.length > 0 ? classPool : backupPool;
+      if (pool.length === 0) {
+        sessionUsedWordIds.clear();
+        pool = WORD_DATABASE;
+      }
+
+      currentWord = pool[Math.floor(Math.random() * pool.length)];
+      sessionUsedWordIds.add(currentWord.id);
+
+      // Render Word on HUD
+      const displayCard = document.getElementById('target-word-display');
+      displayCard.innerHTML = '';
+      currentWord.displayParts.forEach(char => {
+        const span = document.createElement('span');
+        if (char === '_') {
+          span.className = 'word-blank';
+          span.textContent = '_';
+        } else {
+          span.className = 'word-letter';
+          span.textContent = char;
+        }
+        displayCard.appendChild(span);
+      });
+
+      document.getElementById('word-hint').textContent = '💡 ' + currentWord.hint;
+
+      // Clear existing gems and queue 2-3 tricky decoys FIRST!
+      gems = [];
+      decoysRemaining = Math.floor(Math.random() * 2) + 2;
+      hasTargetSpawned = false;
+      nextGemSpawnTimer = 20;
+
+      goldFlash = 12;
+    }
+
+    function doJump() {
+      if (player.isGrounded) {
+        player.vy = player.jumpForce;
+        player.isGrounded = false;
+        playJumpSound();
+
+        // Dust particles
+        for (let i = 0; i < 8; i++) {
+          particles.push({
+            x: player.x + 20 + (Math.random() * 16 - 8),
+            y: player.groundY + player.height,
+            vx: -(Math.random() * 3 + 1),
+            vy: -(Math.random() * 1.5),
+            color: "#d97706",
+            size: Math.random() * 4 + 2,
+            alpha: 0.8,
+            life: 0,
+            maxLife: 20
+          });
+        }
+      }
+    }
+
+    function handleTouchJump(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      doJump();
+    }
+
+    // Keyboard & Canvas Tap Listeners
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        const gameScreen = document.getElementById('screen-game');
+        if (gameScreen && gameScreen.classList.contains('active')) {
+          e.preventDefault();
+          doJump();
+        }
+      }
+    });
+
+    document.getElementById('canvas-wrapper').addEventListener('click', (e) => {
+      if (e.target.id !== 'jump-btn') {
+        doJump();
+      }
+    });
+
+    function spawnGemstone() {
+      if (!currentWord) return;
+
+      const neededLetter = currentWord.missingLetter.toUpperCase();
+      const lanes = [205, 265, 330];
+      const targetLane = lanes[Math.floor(Math.random() * lanes.length)];
+
+      const allVowels = ["A", "E", "I", "O", "U", "Y"];
+      const potentialDistractors = allVowels.filter(v => v !== neededLetter);
+
+      let letter;
+      if (decoysRemaining > 0) {
+        // Guarantee tricky decoy first!
+        decoysRemaining--;
+        letter = potentialDistractors[Math.floor(Math.random() * potentialDistractors.length)];
+      } else if (!hasTargetSpawned) {
+        // Target letter appears now after decoys!
+        letter = neededLetter;
+        hasTargetSpawned = true;
+        decoysRemaining = Math.floor(Math.random() * 2) + 2;
+      } else {
+        const onScreen = gems.some(g => g.letter.toUpperCase() === neededLetter);
+        if (!onScreen && Math.random() < 0.4) {
+          letter = neededLetter;
+        } else {
+          letter = potentialDistractors[Math.floor(Math.random() * potentialDistractors.length)];
+        }
+      }
+
+      // Random color
+      const colorType = GEM_COLOR_KEYS[Math.floor(Math.random() * GEM_COLOR_KEYS.length)];
+      const baseSpeed = 4.2 + Math.min(2.5, wordsSolved * 0.12);
+      const speedJitter = (Math.random() - 0.5) * 1.4;
+
+      gems.push({
+        x: 820 + Math.random() * 40,
+        y: targetLane,
+        baseY: targetLane,
+        speed: Math.max(3.6, baseSpeed + speedJitter),
+        letter: letter,
+        colorType: colorType,
+        bobPhase: Math.random() * Math.PI * 2,
+        radius: 26
+      });
+    }
+
+    /* 8. MAIN 60FPS CANVAS RENDERING */
+    function gameLoop() {
+      const canvas = document.getElementById('game-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      frameCount++;
+
+      ctx.save();
+
+      // Screen Shake
+      if (screenShake > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake * 6, (Math.random() - 0.5) * screenShake * 6);
+        screenShake -= 0.1;
+      }
+
+      // 1. SKY GRADIENT
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, 450);
+      skyGrad.addColorStop(0, "#08061a");
+      skyGrad.addColorStop(0.5, "#170f38");
+      skyGrad.addColorStop(0.85, "#2b144d");
+      skyGrad.addColorStop(1, "#180c2b");
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, 800, 450);
+
+      // Stars
+      ctx.fillStyle = "#fef08a";
+      for (let i = 0; i < 35; i++) {
+        const sx = (i * 73 + frameCount * 0.2) % 800;
+        const sy = 20 + ((i * 37) % 150);
+        ctx.fillRect(sx, sy, 1.5, 1.5);
+      }
+
+      // Crescent Moon
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath();
+      ctx.arc(680, 70, 26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#0c0824";
+      ctx.beginPath();
+      ctx.arc(692, 65, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Distant Agrabah Palace Silhouette
+      ctx.fillStyle = "#1e1038";
+      ctx.beginPath();
+      ctx.moveTo(0, 360);
+      ctx.lineTo(80, 360); ctx.lineTo(80, 240); ctx.arc(95, 235, 15, Math.PI, 0); ctx.lineTo(110, 360);
+      ctx.lineTo(240, 360); ctx.lineTo(240, 200); ctx.arc(270, 190, 30, Math.PI, 0); ctx.lineTo(300, 360);
+      ctx.lineTo(450, 360); ctx.lineTo(450, 250); ctx.arc(465, 245, 15, Math.PI, 0); ctx.lineTo(480, 360);
+      ctx.lineTo(800, 360); ctx.lineTo(800, 450); ctx.lineTo(0, 450);
+      ctx.fill();
+
+      // Cave Stalactites (Ceiling)
+      ctx.fillStyle = "#1b1029";
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(800, 0); ctx.lineTo(800, 25);
+      const stalactites = [[40, 55], [110, 40], [180, 75], [260, 45], [330, 85], [420, 60], [510, 80], [600, 40], [690, 75], [760, 50]];
+      for (let i = stalactites.length - 1; i >= 0; i--) {
+        ctx.lineTo(stalactites[i][0] + 15, 20);
+        ctx.lineTo(stalactites[i][0], stalactites[i][1]);
+        ctx.lineTo(stalactites[i][0] - 15, 20);
+      }
+      ctx.lineTo(0, 25);
+      ctx.closePath();
+      ctx.fill();
+
+      // Floor & Gold Pavement
+      groundScroll = (groundScroll + 3.5) % 40;
+      const floorGrad = ctx.createLinearGradient(0, 360, 0, 450);
+      floorGrad.addColorStop(0, "#451a03");
+      floorGrad.addColorStop(0.3, "#78350f");
+      floorGrad.addColorStop(1, "#1c1917");
+      ctx.fillStyle = floorGrad;
+      ctx.fillRect(0, 360, 800, 90);
+
+      ctx.strokeStyle = "#92400e";
+      ctx.lineWidth = 2;
+      for (let x = -groundScroll; x < 800; x += 40) {
+        ctx.strokeRect(x, 362, 38, 18);
+        ctx.strokeRect(x - 20, 382, 38, 18);
+        ctx.strokeRect(x, 402, 38, 18);
+        ctx.strokeRect(x - 20, 422, 38, 25);
+      }
+
+      // Torches with animated fire
+      [80, 320, 560, 780].forEach((tx) => {
+        const torchX = (tx - groundScroll * 0.8 + 800) % 800;
+        ctx.fillStyle = "#b45309";
+        ctx.fillRect(torchX - 5, 280, 10, 80);
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(torchX, 280, 10, Math.PI, 0);
+        ctx.fill();
+
+        const flameShift = Math.sin(frameCount * 0.2 + tx) * 4;
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.moveTo(torchX - 7, 276);
+        ctx.lineTo(torchX + flameShift, 248);
+        ctx.lineTo(torchX + 7, 276);
+        ctx.fill();
+
+        ctx.fillStyle = "#fef08a";
+        ctx.fillRect(torchX - 2, 266, 4, 8);
+      });
+
+      // 2. ALADDIN CHARACTER
+      player.vy += player.gravity;
+      player.y += player.vy;
+      if (player.y >= player.groundY) {
+        player.y = player.groundY;
+        player.vy = 0;
+        player.isGrounded = true;
+      }
+      if (player.isGrounded) {
+        player.runFrame += 0.22;
+      }
+
+      // Aladdin Jump magic dust
+      if (!player.isGrounded) {
+        particles.push({
+          x: player.x + 12 + Math.random() * 12,
+          y: player.y + player.height - 10,
+          vx: -2 - Math.random() * 2,
+          vy: Math.random() * 2 - 1,
+          color: "#fbbf24",
+          size: Math.random() * 3 + 1,
+          alpha: 0.9,
+          life: 0,
+          maxLife: 20
+        });
+      }
+
+      // Draw Aladdin
+      ctx.save();
+      const px = player.x;
+      const py = player.y;
+      const legOffset = Math.sin(player.runFrame) * 8;
+
+      // Shadow
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      const shadowW = Math.max(8, 22 * (1 - (player.groundY - py) / 200));
+      ctx.beginPath();
+      ctx.ellipse(px + 20, player.groundY + player.height, shadowW, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // White harem pants
+      ctx.fillStyle = "#f8fafc";
+      if (player.isGrounded) {
+        ctx.fillRect(px + 8, py + 42, 11, 24 - legOffset * 0.4);
+        ctx.fillRect(px + 22, py + 42, 11, 24 + legOffset * 0.4);
+        ctx.fillStyle = "#78350f"; // Boots
+        ctx.fillRect(px + 6, py + 62 - legOffset * 0.4, 14, 8);
+        ctx.fillRect(px + 22, py + 62 + legOffset * 0.4, 14, 8);
+      } else {
+        ctx.fillRect(px + 6, py + 42, 13, 18);
+        ctx.fillRect(px + 22, py + 44, 13, 16);
+        ctx.fillStyle = "#78350f";
+        ctx.fillRect(px + 5, py + 57, 13, 8);
+        ctx.fillRect(px + 23, py + 58, 13, 8);
+      }
+
+      // Red waist sash
+      ctx.fillStyle = "#dc2626";
+      ctx.fillRect(px + 8, py + 38, 26, 6);
+
+      // Chest skin
+      ctx.fillStyle = "#fcd34d";
+      ctx.fillRect(px + 12, py + 18, 18, 22);
+
+      // Purple Open Vest
+      ctx.fillStyle = "#7e22ce";
+      ctx.fillRect(px + 6, py + 18, 8, 22);
+      ctx.fillRect(px + 28, py + 18, 8, 22);
+      ctx.fillRect(px + 10, py + 16, 22, 4);
+
+      // Arms
+      ctx.fillStyle = "#fcd34d";
+      if (player.isGrounded) {
+        ctx.fillRect(px + 4, py + 22 - legOffset * 0.5, 6, 16);
+        ctx.fillRect(px + 32, py + 22 + legOffset * 0.5, 6, 16);
+      } else {
+        ctx.fillRect(px + 2, py + 12, 6, 16);
+        ctx.fillRect(px + 34, py + 12, 6, 16);
+      }
+
+      // Head & Hair
+      ctx.fillStyle = "#fcd34d";
+      ctx.fillRect(px + 12, py + 4, 18, 15);
+      ctx.fillStyle = "#1e1b4b"; // hair
+      ctx.fillRect(px + 8, py + 2, 24, 7);
+      ctx.fillRect(px + 6, py + 7, 7, 10);
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(px + 24, py + 9, 3, 3); // eye
+
+      // Red Fez Hat with Gold Tassel
+      ctx.fillStyle = "#b91c1c";
+      ctx.fillRect(px + 14, py - 6, 14, 10);
+      ctx.fillStyle = "#fbbf24";
+      const tasselDrop = player.isGrounded ? Math.sin(player.runFrame * 2) * 2 : -3;
+      ctx.fillRect(px + 22, py - 8, 3, 3);
+      ctx.fillRect(px + 25, py - 6 + tasselDrop, 2, 6);
+      ctx.restore();
+
+      // 3. GEMSTONES SPAWN & COLLISION
+      nextGemSpawnTimer--;
+      if (nextGemSpawnTimer <= 0) {
+        spawnGemstone();
+        nextGemSpawnTimer = Math.floor(Math.random() * 25) + 38;
+      }
+
+      let wordSolvedThisFrame = false;
+
+      for (let i = gems.length - 1; i >= 0; i--) {
+        const gem = gems[i];
+        if (!gem) continue;
+
+        gem.x -= gem.speed;
+        gem.y = gem.baseY + Math.sin(frameCount * 0.08 + gem.bobPhase) * 10;
+
+        // Collision Check with Aladdin
+        const pCenterX = player.x + 20;
+        const pCenterY = player.y + 35;
+        const dist = Math.hypot(gem.x - pCenterX, gem.y - pCenterY);
+
+        if (dist < gem.radius + 24) {
+          const targetLetter = (currentWord ? currentWord.missingLetter : '').toUpperCase();
+          const hitLetter = (gem.letter || '').toUpperCase();
+          const isCorrect = Boolean(targetLetter && hitLetter === targetLetter);
+
+          if (isCorrect) {
+            // Correct letter collected!
+            gameScore += 100;
+            wordsSolved += 1;
+            correctCatches += 1;
+            document.getElementById('hud-score').textContent = gameScore;
+            document.getElementById('hud-solved').textContent = wordsSolved;
+
+            playCollectSound();
+            playFanfare();
+
+            floatingTexts.push({
+              x: gem.x,
+              y: gem.y - 20,
+              text: "+100 ✨ [" + hitLetter + "]",
+              color: "#34d399",
+              alpha: 1,
+              vy: -2
+            });
+
+            // Burst particles
+            for (let p = 0; p < 24; p++) {
+              const angle = Math.random() * Math.PI * 2;
+              const spd = Math.random() * 5 + 2;
+              particles.push({
+                x: gem.x,
+                y: gem.y,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                color: ["#fbbf24", "#34d399", "#60a5fa", "#f472b6"][Math.floor(Math.random() * 4)],
+                size: Math.random() * 5 + 2,
+                alpha: 1,
+                life: 0,
+                maxLife: 30
+              });
+            }
+
+            // Update live accuracy
+            const total = correctCatches + wrongCatches;
+            const acc = total > 0 ? Math.round((correctCatches / total) * 100) : 100;
+            document.getElementById('hud-accuracy').textContent = acc + "%";
+
+            wordSolvedThisFrame = true;
+            pickNextWord();
+            break; // Stop gem loop for this frame because gems were reset by pickNextWord()
+          } else {
+            // Wrong letter collected!
+            gameScore = Math.max(0, gameScore - 10);
+            wrongCatches += 1;
+            document.getElementById('hud-score').textContent = gameScore;
+
+            playWrongSound();
+            screenShake = 1.8;
+            redFlash = 12;
+
+            floatingTexts.push({
+              x: gem.x,
+              y: gem.y - 20,
+              text: "-10 ❌ (Need " + targetLetter + ")",
+              color: "#f87171",
+              alpha: 1,
+              vy: -1.8
+            });
+
+            // Red smoke puff
+            for (let p = 0; p < 12; p++) {
+              particles.push({
+                x: gem.x,
+                y: gem.y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                color: "#ef4444",
+                size: Math.random() * 4 + 2,
+                alpha: 0.9,
+                life: 0,
+                maxLife: 20
+              });
+            }
+
+            const total = correctCatches + wrongCatches;
+            const acc = total > 0 ? Math.round((correctCatches / total) * 100) : 100;
+            document.getElementById('hud-accuracy').textContent = acc + "%";
+
+            gems.splice(i, 1);
+            continue;
+          }
+        }
+
+        // Offscreen removal
+        if (gem.x < -50) {
+          gems.splice(i, 1);
+          continue;
+        }
+
+        // Draw Gemstone
+        ctx.save();
+        ctx.translate(gem.x, gem.y);
+        const palette = GEM_COLOR_PALETTES[gem.colorType] || GEM_COLOR_PALETTES.topaz;
+        const r = gem.radius;
+
+        ctx.shadowColor = palette.fill;
+        ctx.shadowBlur = 12;
+
+        ctx.fillStyle = palette.fill;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.5;
+
+        // Faceted Octagon Shape
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.7, -r);
+        ctx.lineTo(r * 0.7, -r);
+        ctx.lineTo(r, -r * 0.4);
+        ctx.lineTo(r * 0.8, r * 0.6);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r * 0.8, r * 0.6);
+        ctx.lineTo(-r, -r * 0.4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner Facets
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.5, -r * 0.5);
+        ctx.lineTo(r * 0.5, -r * 0.5);
+        ctx.lineTo(0, r * 0.8);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+
+        // Bold Letter
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px 'Press Start 2P', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 4;
+        ctx.strokeText(gem.letter, 0, 2);
+        ctx.fillText(gem.letter, 0, 2);
+        ctx.restore();
+      }
+
+      // 4. PARTICLES
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        if (!pt) continue;
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life++;
+        pt.alpha = 1 - pt.life / pt.maxLife;
+
+        if (pt.life >= pt.maxLife) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, pt.alpha);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+        ctx.restore();
+      }
+
+      // 5. FLOATING TEXTS
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        if (!ft) continue;
+        ft.y += ft.vy;
+        ft.alpha -= 0.025;
+
+        if (ft.alpha <= 0) {
+          floatingTexts.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.alpha);
+        ctx.font = "bold 15px 'Press Start 2P', monospace";
+        ctx.fillStyle = ft.color;
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+
+      // Red Flash Overlay on error
+      if (redFlash > 0) {
+        ctx.fillStyle = "rgba(239, 68, 68, " + (redFlash * 0.025) + ")";
+        ctx.fillRect(0, 0, 800, 450);
+        redFlash--;
+      }
+
+      ctx.restore();
+
+      animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function exitGame() {
+      clearInterval(gameInterval);
+      cancelAnimationFrame(animFrameId);
+      showScreen('entry');
+    }
+
+    /* 9. SCREEN C: RESULTS & FIREBASE RECORD SUBMISSION */
+    function endArcadeGame() {
+      cancelAnimationFrame(animFrameId);
+      clearInterval(gameInterval);
+
+      const total = correctCatches + wrongCatches;
+      const finalAcc = total > 0 ? Math.round((correctCatches / total) * 100) : 100;
+
+      document.getElementById('res-score').textContent = gameScore;
+      document.getElementById('res-words').textContent = wordsSolved;
+      document.getElementById('res-accuracy').textContent = finalAcc + "%";
+      document.getElementById('result-student-tag').textContent = currentStudentName + " • " + currentStudentClass;
+
+      // Rank title
+      let rankTitle = "Brave Agrabah Apprentice ⭐";
+      if (gameScore >= 1000) rankTitle = "Grand Sultan of Vowels 👑";
+      else if (gameScore >= 600) rankTitle = "Master Cave Spellbinder 💎";
+      else if (gameScore >= 300) rankTitle = "Royal Desert Explorer 🐪";
+      document.getElementById('result-rank-title').textContent = rankTitle;
+
+      showScreen('results');
+
+      // Submit record to Firebase Realtime Database at /scores/
+      const scoreRecord = {
+        name: currentStudentName,
+        class: currentStudentClass,
+        score: gameScore,
+        accuracy: finalAcc,
+        timestamp: Date.now()
+      };
+
+      saveLocalScore(scoreRecord);
+
+      const syncTimeEl = document.getElementById('firebase-sync-time');
+      if (database) {
+        database.ref('scores').push().set(scoreRecord)
+          .then(() => {
+            syncTimeEl.textContent = "Synced to Firebase RTDB at " + new Date().toLocaleTimeString();
+          })
+          .catch((err) => {
+            console.warn("RTDB write warning:", err);
+            syncTimeEl.textContent = "Saved to classroom backup (local sync) at " + new Date().toLocaleTimeString();
+          });
+      } else {
+        syncTimeEl.textContent = "Saved to classroom backup (local sync) at " + new Date().toLocaleTimeString();
+      }
+    }
+
+    function restartGame() {
+      showScreen('entry');
+    }
+
+    function copyScoreSummary() {
+      const total = correctCatches + wrongCatches;
+      const finalAcc = total > 0 ? Math.round((correctCatches / total) * 100) : 100;
+      const summaryText = `🏰 ALADDIN'S CAVE OF VOWELS - SCORE REPORT 🏰\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n👤 Student: ${currentStudentName}\n🏫 Class: ${currentStudentClass}\n🏆 Final Score: ${gameScore} points\n📚 Words Solved: ${wordsSolved}\n🎯 Accuracy: ${finalAcc}%\n⏰ Date: ${new Date().toLocaleString()}\n✅ Status: Record submitted successfully to Teacher Anne!\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+      navigator.clipboard.writeText(summaryText).then(() => {
+        alert("Score summary copied to clipboard!");
+      }).catch(() => {
+        const ta = document.createElement("textarea");
+        ta.value = summaryText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        alert("Score summary copied to clipboard!");
+      });
+    }
+
+    /* 10. SCREEN D: PASSWORD-PROTECTED TEACHER DASHBOARD */
+    const TEACHER_PASSWORD = "ANNE_TEACHER_2026";
+    let teacherLoggedIn = false;
+    let allTeacherScores = [];
+    let selectedClassFilter = "All Classes";
+    let tableSortKey = "timestamp";
+    let tableSortAsc = false;
+
+    function handleTeacherLogin(e) {
+      if (e) e.preventDefault();
+      const pass = document.getElementById('teacher-password-input').value;
+      const errEl = document.getElementById('teacher-password-error');
+
+      if (pass === TEACHER_PASSWORD) {
+        teacherLoggedIn = true;
+        errEl.style.display = 'none';
+        playFanfare();
+        document.getElementById('teacher-login-gate').style.display = 'none';
+        document.getElementById('teacher-dashboard-view').style.display = 'flex';
+        initTeacherFirebaseListener();
+      } else {
+        playWrongSound();
+        errEl.style.display = 'block';
+      }
+    }
+
+    function initTeacherFirebaseListener() {
+      if (database) {
+        database.ref('scores').on('value', (snapshot) => {
+          const data = snapshot.val();
+          const items = [];
+          if (data) {
+            Object.keys(data).forEach(key => {
+              const row = data[key];
+              if (row && typeof row === 'object') {
+                items.push({
+                  id: key,
+                  name: row.name || 'Anonymous',
+                  class: row.class || 'Year 1',
+                  score: Number(row.score) || 0,
+                  accuracy: Number(row.accuracy) || 0,
+                  timestamp: Number(row.timestamp) || Date.now()
+                });
+              }
+            });
+          }
+          // Merge local backup items
+          const local = getLocalScores();
+          local.forEach(loc => {
+            if (!items.some(it => it.timestamp === loc.timestamp && it.name === loc.name)) {
+              items.push(loc);
+            }
+          });
+          allTeacherScores = items;
+          renderScoresTable();
+        }, (err) => {
+          allTeacherScores = getLocalScores();
+          renderScoresTable();
+        });
+      } else {
+        allTeacherScores = getLocalScores();
+        renderScoresTable();
+      }
+    }
+
+    function setTableClassFilter(className, btnEl) {
+      selectedClassFilter = className;
+      document.querySelectorAll('#screen-teacher .btn-secondary').forEach(b => {
+        b.style.borderColor = (b === btnEl) ? 'var(--gold)' : 'rgba(245, 158, 11, 0.5)';
+      });
+      renderScoresTable();
+    }
+
+    function toggleSort(key) {
+      if (tableSortKey === key) {
+        tableSortAsc = !tableSortAsc;
+      } else {
+        tableSortKey = key;
+        tableSortAsc = false;
+      }
+      renderScoresTable();
+    }
+
+    function renderScoresTable() {
+      const search = (document.getElementById('table-search-input').value || '').toLowerCase().trim();
+
+      const filtered = allTeacherScores.filter(item => {
+        const matchClass = selectedClassFilter === "All Classes" || item.class === selectedClassFilter;
+        const matchName = item.name.toLowerCase().includes(search);
+        return matchClass && matchName;
+      }).sort((a, b) => {
+        let diff = 0;
+        if (tableSortKey === 'timestamp' || tableSortKey === 'score' || tableSortKey === 'accuracy') {
+          diff = (a[tableSortKey] || 0) - (b[tableSortKey] || 0);
+        } else {
+          diff = a.name.localeCompare(b.name);
+        }
+        return tableSortAsc ? diff : -diff;
+      });
+
+      // Update Summary Cards
+      const totalCount = filtered.length;
+      const sumScore = filtered.reduce((acc, curr) => acc + (curr.score || 0), 0);
+      const sumAcc = filtered.reduce((acc, curr) => acc + (curr.accuracy || 0), 0);
+      const topScore = filtered.length > 0 ? Math.max(...filtered.map(s => s.score || 0)) : 0;
+
+      document.getElementById('stat-total').textContent = totalCount;
+      document.getElementById('stat-high').textContent = topScore;
+      document.getElementById('stat-avg').textContent = (totalCount > 0 ? Math.round(sumScore / totalCount) : 0) + " pts";
+      document.getElementById('stat-acc').textContent = (totalCount > 0 ? Math.round(sumAcc / totalCount) : 100) + "%";
+
+      // Render Table Rows
+      const tbody = document.getElementById('scores-table-body');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 24px; color: #64748b;">No student records found.</td></tr>';
+        return;
+      }
+
+      filtered.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const dateObj = new Date(row.timestamp || Date.now());
+        const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const isChampion = idx === 0 && tableSortKey === 'score' && !tableSortAsc;
+
+        tr.innerHTML = `
+          <td style="font-weight: 600; color: #fde68a;">
+            ${isChampion ? '👑 ' : ''}${escapeHtml(row.name)}
+          </td>
+          <td><span style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 6px; font-size: 11px; color: var(--gold-light);">${escapeHtml(row.class)}</span></td>
+          <td class="font-pixel" style="color: var(--gold); font-size: 11px;">${row.score}</td>
+          <td style="font-weight: 600; color: ${row.accuracy >= 80 ? '#10b981' : row.accuracy >= 60 ? '#f59e0b' : '#ef4444'};">${row.accuracy}%</td>
+          <td style="color: #94a3b8; font-size: 11px;">${dateStr}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportScoresToCSV() {
+      if (allTeacherScores.length === 0) {
+        alert("No student scores available to export.");
+        return;
+      }
+
+      const headers = ["Student Name", "Class", "Score", "Accuracy (%)", "Date", "Time", "Firebase ID"];
+      const rows = allTeacherScores.map(s => {
+        const d = new Date(s.timestamp || Date.now());
+        return [
+          `"${(s.name || '').replace(/"/g, '""')}"`,
+          `"${s.class || ''}"`,
+          s.score || 0,
+          s.accuracy || 0,
+          `"${d.toLocaleDateString()}"`,
+          `"${d.toLocaleTimeString()}"`,
+          `"${s.id || ''}"`
+        ].join(',');
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(','), ...rows].join('\r\n');
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateStamp = new Date().toISOString().split('T')[0];
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Aladdin_Cave_Vowels_Scores_${dateStamp}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
